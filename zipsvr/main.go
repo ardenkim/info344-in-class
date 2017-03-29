@@ -9,9 +9,9 @@ import (
 )
 
 type zip struct {
-	Zip string 'json:"zip"'
-	City string 'json:"city"'
-	State string 'json:"state"'
+	Zip string `json:"zip"`
+	City string `json:"city"`
+	State string `json:"state"`
 }
 
 type zipSlice []*zip
@@ -33,6 +33,29 @@ func helloHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// Why not *?
+// interface is always passed by pointer/reference
+// responsewriter is a interface not a structure
+// (zi zipIndex) = receiver
+// 
+func (zi zipIndex) zipsForCityHandler(w http.ResponseWriter, r *http.Request) {	// must contain 2 params and must be types http.ResponseWriter and *http.Request
+	// /zips/city/seattle
+	_, city := path.Split(r.URL.Path)	// take a path then separate _ = /zips/city city = /seattle
+	lcity := strings.ToLower(city)
+
+	w.Header().Add("Content-Type", "application/json; charset=utf-8")
+
+	// can write directly to the writer
+	encoder := json.NewEncoder(w)
+	
+	if err:= encoder.Encode(zi[lcity]); err != null {
+		http.Error(w, "error encoding json: " + err.Error(), 
+			http.StatusInternalServerError) // error occurs in server, so we send out server interal error 500s
+	}
+	// not yet added
+
+}
+
 // where program starts
 func main() {
 	// var addr string = os.Getenv("ADDR")
@@ -42,6 +65,12 @@ func main() {
 		// and exists with a code of 1, indicating an error
 		log.Fatal("please set ADDR environment vaiable")
 	}
+
+	http.HandleFunc("/hello", helloHandler) // when someone does GET/POST/.. on /hello, you'll pass in the pointer to the function
+
+	fmt.Printf("server is listening at %s...\n", addr)
+	log.Fatal(http.ListenAndServe(addr, nil)) // nil == null
+// end of lecture 1
 
 	f, err := os.Open("../data/zips.json")
 	if err != nil {
@@ -64,11 +93,8 @@ func main() {
 
 	fmt.Printf("there are %d zips in Seattle\n", len(zi["seattle"]))
 
-	// Register our helloHandler as the handler for
-	// the '/hello' 
-	// http.HandleFunc("/hello", helloHandler) // when someone does GET/POST/.. on /hello, you'll pass in the pointer to the function
+	// http.HandleFunc("/zips/city/", zipsForCityHandler)	// not work because of receiver
+	http.HandleFunc("/zips/city/", zi.zipsForCityHandler)
 
-	// fmt.Printf("server is listening at %s...\n", addr)
-	// log.Fatal(http.ListenAndServe(addr, nil)) // nil == null
 
 }
